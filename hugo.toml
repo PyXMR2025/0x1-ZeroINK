@@ -31,27 +31,66 @@ enableGitInfo = true
     isPlainText = true
     notAlternative = true
 
-[menu]
-  [[menu.main]]
-    identifier = "posts"
-    name = "Posts"
-    url = "/posts/"
-    weight = 10
-  [[menu.main]]
-    identifier = "tags"
-    name = "Tags"
-    url = "/tags/"
-    weight = 20
-  [[menu.main]]
-    identifier = "archives"
-    name = "Archives"
-    url = "/archives/"
-    weight = 30
-  [[menu.main]]
-    identifier = "search"
-    name = "Search"
-    url = "/search/"
-    weight = 40
+[languages]
+  [languages.en]
+    locale = "en-us"
+    label = "English"
+    title = "0x1 ZeroINK"
+    [languages.en.params]
+      description = "Jackie's notes on security, open source, and programming — plus privacy and hacker culture; daily posts, essays, and research papers."
+      [languages.en.params.homeInfoParams]
+        Title = "Welcome to ZeroINK"
+        Content = "Jackie's notes on security, open source, and programming — plus privacy and hacker culture"
+    [[languages.en.menu.main]]
+      identifier = "posts"
+      name = "Posts"
+      url = "/posts/"
+      weight = 10
+    [[languages.en.menu.main]]
+      identifier = "tags"
+      name = "Tags"
+      url = "/tags/"
+      weight = 20
+    [[languages.en.menu.main]]
+      identifier = "archives"
+      name = "Archives"
+      url = "/archives/"
+      weight = 30
+    [[languages.en.menu.main]]
+      identifier = "search"
+      name = "Search"
+      url = "/search/"
+      weight = 40
+
+  [languages.zh]
+    locale = "zh-cn"
+    label = "简体中文"
+    title = "0x1 ZeroINK"
+    [languages.zh.params]
+      description = "Jackie 关于安全、开源与编程的笔记，兼谈隐私与极客文化——每日分享、思考长文与研究论文。"
+      [languages.zh.params.homeInfoParams]
+        Title = "欢迎来到 ZeroINK"
+        Content = "Jackie 关于安全、开源与编程的笔记，兼谈隐私与极客文化"
+    [[languages.zh.menu.main]]
+      identifier = "posts"
+      name = "文章"
+      url = "/posts/"
+      weight = 10
+    [[languages.zh.menu.main]]
+      identifier = "tags"
+      name = "标签"
+      url = "/tags/"
+      weight = 20
+    [[languages.zh.menu.main]]
+      identifier = "archives"
+      name = "归档"
+      url = "/archives/"
+      weight = 30
+    [[languages.zh.menu.main]]
+      identifier = "search"
+      name = "搜索"
+      url = "/search/"
+      weight = 40
 
 [params]
   env = "production"
@@ -60,6 +99,7 @@ enableGitInfo = true
 
   defaultTheme = "auto"
   disableThemeToggle = false
+  displayFullLangName = true
 
   ShowReadingTime = true
   ShowWordCount = true
@@ -77,10 +117,6 @@ enableGitInfo = true
   hideSummary = false
   showtoc = true
   tocopen = false
-
-  [params.homeInfoParams]
-    Title = "Hi there 👋"
-    Content = "Welcome to ZeroINK — Jackie's personal blog."
 
   [params.editPost]
     URL = "https://github.com/PyXMR2025/0x1-ZeroINK/edit/main/content"
