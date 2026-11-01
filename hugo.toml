@@ -149,6 +149,10 @@ enableGitInfo = true
     url = "https://orcid.org/0009-0005-9010-4173"
 
   [[params.socialIcons]]
+    name = "hackerone"
+    url = "https://hackerone.com/ohyijia"
+
+  [[params.socialIcons]]
     name = "rss"
     url = "https://blog.zjackie.ink/index.xml"
 
