@@ -130,7 +130,23 @@ enableGitInfo = true
 
   [[params.socialIcons]]
     name = "github"
-    url = "https://github.com/PyXMR2025/0x1-ZeroINK"
+    url = "https://github.com/PyXMR2025"
+
+  [[params.socialIcons]]
+    name = "reddit"
+    url = "https://www.reddit.com/user/ohyijia"
+
+  [[params.socialIcons]]
+    name = "x"
+    url = "https://x.com/PyXMR2025"
+
+  [[params.socialIcons]]
+    name = "matrix"
+    url = "https://matrix.to/#/@pyxmr2025:mozilla.org"
+
+  [[params.socialIcons]]
+    name = "orcid"
+    url = "https://orcid.org/0009-0005-9010-4173"
 
   [[params.socialIcons]]
     name = "rss"
