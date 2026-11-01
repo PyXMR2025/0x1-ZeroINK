@@ -100,6 +100,7 @@ enableGitInfo = true
   env = "production"
   description = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
   author = "Jackie"
+  images = ["images/default/og-default.png"]
 
   defaultTheme = "auto"
   disableThemeToggle = false
