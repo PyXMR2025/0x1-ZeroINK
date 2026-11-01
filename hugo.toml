@@ -4,6 +4,7 @@ theme = "PaperMod"
 
 locale = "en-us"
 defaultContentLanguage = "en"
+timeZone = "Asia/Shanghai"
 hasCJKLanguage = true
 
 copyright = "Copyright &copy; 2026 Jackie · Content licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)"
@@ -16,6 +17,8 @@ enableGitInfo = true
 
 [permalinks]
   posts = "/posts/:slug/"
+  share = "/share/:slug/"
+  research = "/research/:slug/"
 
 [outputs]
   home = ["HTML", "RSS", "JSON", "WebAppManifest"]
@@ -42,25 +45,30 @@ enableGitInfo = true
         Title = "Welcome to ZeroINK"
         Content = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
     [[languages.en.menu.main]]
-      identifier = "posts"
-      name = "Posts"
-      url = "/posts/"
+      identifier = "share"
+      name = "Share Everyday"
+      url = "/share/"
       weight = 10
+    [[languages.en.menu.main]]
+      identifier = "research"
+      name = "Research Lab"
+      url = "/research/"
+      weight = 20
     [[languages.en.menu.main]]
       identifier = "tags"
       name = "Tags"
       url = "/tags/"
-      weight = 20
+      weight = 30
     [[languages.en.menu.main]]
       identifier = "archives"
       name = "Archives"
       url = "/archives/"
-      weight = 30
+      weight = 40
     [[languages.en.menu.main]]
       identifier = "search"
       name = "Search"
       url = "/search/"
-      weight = 40
+      weight = 50
 
   [languages.zh]
     locale = "zh-cn"
@@ -76,31 +84,37 @@ enableGitInfo = true
       Text = "建议修改"
       appendFilePath = true
     [[languages.zh.menu.main]]
-      identifier = "posts"
-      name = "文章"
-      url = "/posts/"
+      identifier = "share"
+      name = "每日分享"
+      url = "/share/"
       weight = 10
+    [[languages.zh.menu.main]]
+      identifier = "research"
+      name = "研究实验室"
+      url = "/research/"
+      weight = 20
     [[languages.zh.menu.main]]
       identifier = "tags"
       name = "标签"
       url = "/tags/"
-      weight = 20
+      weight = 30
     [[languages.zh.menu.main]]
       identifier = "archives"
       name = "归档"
       url = "/archives/"
-      weight = 30
+      weight = 40
     [[languages.zh.menu.main]]
       identifier = "search"
       name = "搜索"
       url = "/search/"
-      weight = 40
+      weight = 50
 
 [params]
   env = "production"
   description = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
   author = "Jackie"
   images = ["images/default/og-default.png"]
+  mainSections = ["posts", "share", "research"]
 
   defaultTheme = "auto"
   disableThemeToggle = false
