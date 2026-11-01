@@ -37,10 +37,10 @@ enableGitInfo = true
     label = "English"
     title = "0x1 ZeroINK"
     [languages.en.params]
-      description = "Jackie's notes on security, open source, and programming — plus privacy and hacker culture; daily posts, essays, and research papers."
+      description = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
       [languages.en.params.homeInfoParams]
         Title = "Welcome to ZeroINK"
-        Content = "Jackie's notes on security, open source, and programming — plus privacy and hacker culture"
+        Content = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
     [[languages.en.menu.main]]
       identifier = "posts"
       name = "Posts"
@@ -67,10 +67,10 @@ enableGitInfo = true
     label = "简体中文"
     title = "0x1 ZeroINK"
     [languages.zh.params]
-      description = "Jackie 关于安全、开源与编程的笔记，兼谈隐私与极客文化——每日分享、思考长文与研究论文。"
+      description = "Jackie 关于加密货币、隐私与开源的思考与研究。"
       [languages.zh.params.homeInfoParams]
         Title = "欢迎来到 ZeroINK"
-        Content = "Jackie 关于安全、开源与编程的笔记，兼谈隐私与极客文化"
+        Content = "Jackie 关于加密货币、隐私与开源的思考与研究。"
     [[languages.zh.menu.main]]
       identifier = "posts"
       name = "文章"
@@ -94,8 +94,8 @@ enableGitInfo = true
 
 [params]
   env = "production"
-  description = "Jackie's personal blog"
-  author = "Jackie"
+  description = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
+  author = "Jackie PyXMR2025"
 
   defaultTheme = "auto"
   disableThemeToggle = false
