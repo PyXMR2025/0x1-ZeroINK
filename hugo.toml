@@ -6,7 +6,7 @@ locale = "en-us"
 defaultContentLanguage = "en"
 hasCJKLanguage = true
 
-copyright = "Copyright &copy; 2026 Jackie"
+copyright = "Copyright &copy; 2026 Jackie · Content licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)"
 
 enableEmoji = true
 enableGitInfo = true
@@ -71,6 +71,10 @@ enableGitInfo = true
       [languages.zh.params.homeInfoParams]
         Title = "欢迎来到 ZeroINK"
         Content = "Jackie 关于加密货币、隐私与开源的思考与研究。"
+    [languages.zh.params.editPost]
+      URL = "https://github.com/PyXMR2025/0x1-ZeroINK/edit/main/content"
+      Text = "建议修改"
+      appendFilePath = true
     [[languages.zh.menu.main]]
       identifier = "posts"
       name = "文章"
@@ -95,7 +99,7 @@ enableGitInfo = true
 [params]
   env = "production"
   description = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
-  author = "Jackie PyXMR2025"
+  author = "Jackie"
 
   defaultTheme = "auto"
   disableThemeToggle = false
@@ -112,7 +116,7 @@ enableGitInfo = true
 
   disableSpecial1stPost = false
   disableScrollToTop = false
-  comments = false
+  comments = true
   hidemeta = false
   hideSummary = false
   showtoc = true
