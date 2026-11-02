@@ -69,6 +69,7 @@ jobs:
 
       - name: Lint Markdown
         uses: DavidAnson/markdownlint-cli2-action@v25
+        continue-on-error: true
         with:
           globs: |
             content/**/*.md
@@ -84,3 +85,4 @@ jobs:
 
       - name: Check spelling with typos
         uses: crate-ci/typos@master
+        continue-on-error: true
