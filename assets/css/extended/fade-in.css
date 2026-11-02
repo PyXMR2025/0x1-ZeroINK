@@ -1,22 +1,22 @@
-/* Page fade-in animation */
-main {
-  animation: fade-up 0.4s ease both;
+/* Card press bounce (article cards on list pages) */
+.post-entry {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
 }
 
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Press: shrink quickly */
+.post-entry:active {
+  transform: scale(0.96);
+  transition-duration: 0.08s;
 }
 
 /* Respect users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  main {
-    animation: none;
+  .post-entry {
+    transition: none;
+  }
+
+  .post-entry:active {
+    transform: none;
   }
 }
