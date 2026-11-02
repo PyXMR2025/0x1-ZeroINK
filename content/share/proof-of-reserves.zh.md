@@ -1,6 +1,7 @@
 ---
 title: "储备证明（Proof of Reserves）是怎么运行的"
 slug: "proof-of-reserves"
+date: 2026-11-02T00:30:00+08:00
 draft: false
 author: "Jackie"
 tags: ["储备证明", "密码学", "交易所安全", "区块链", "加密货币"]

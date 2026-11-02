@@ -1,6 +1,7 @@
 ---
 title: "How Proof of Reserves (PoR) Actually Works"
 slug: "proof-of-reserves"
+date: 2026-11-02T00:30:00+08:00
 draft: false
 author: "Jackie"
 tags: ["proof-of-reserves", "cryptography", "exchange-security", "blockchain", "cryptocurrency"]

@@ -1,7 +1,7 @@
 ---
 title: "示例：一条快速工具推荐"
 slug: "example-short-post"
-# date: 2026-11-01T00:00:00+08:00
+date: 2026-11-01T00:00:00+08:00
 draft: true
 author: "Jackie"
 tags: ["工具"]
