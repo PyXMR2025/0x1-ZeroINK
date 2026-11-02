@@ -1,7 +1,7 @@
 ---
 title: "Example: a quick tool recommendation"
 slug: "example-short-post"
-date: 2026-11-01T00:00:00+08:00
+# date: 2026-11-01T00:00:00+08:00
 draft: true
 author: "Jackie"
 tags: ["tools"]
