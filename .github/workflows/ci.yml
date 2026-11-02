@@ -66,15 +66,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Markdown files
+        id: changed
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/${{ github.base_ref }}...HEAD"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          else
+            RANGE="HEAD~1..HEAD"
+          fi
+          echo "Diff range: $RANGE"
+          { echo "files<<EOF"
+            git diff --name-only --diff-filter=ACMR "$RANGE" -- '*.md'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Lint Markdown
+        if: steps.changed.outputs.files != ''
         uses: DavidAnson/markdownlint-cli2-action@v25
         continue-on-error: true
         with:
-          globs: |
-            content/**/*.md
-            README.md
-            .github/**/*.md
+          globs: ${{ steps.changed.outputs.files }}
 
   spell-check:
     name: Spell check
@@ -82,7 +99,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/${{ github.base_ref }}...HEAD"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          else
+            RANGE="HEAD~1..HEAD"
+          fi
+          echo "Diff range: $RANGE"
+          git diff --name-only --diff-filter=ACMR "$RANGE" > files.txt
+          echo "files=$(paste -sd' ' files.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Check spelling with typos
+        if: steps.changed.outputs.files != ''
         uses: crate-ci/typos@v1.51.1
         continue-on-error: true
+        with:
+          files: ${{ steps.changed.outputs.files }}

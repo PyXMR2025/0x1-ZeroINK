@@ -48,6 +48,7 @@ jobs:
             --timeout 30
             --root-dir ${{ github.workspace }}/public
             --exclude '^https?://(www\.)?example\.com'
+            --exclude '^https?://([^/]*\.)?reddit\.com'
             "./public/**/*.html"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
