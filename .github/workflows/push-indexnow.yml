@@ -23,6 +23,13 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      - name: Wait 10 minutes after Purge Cache
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        run: |
+          echo "Purge Cache completed; waiting 10 minutes before submitting to IndexNow..."
+          sleep 600
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
