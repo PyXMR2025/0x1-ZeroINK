@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: indexnow-${{ github.event.workflow_run.head_sha || github.run_id }}
@@ -19,68 +20,117 @@ concurrency:
 
 jobs:
   indexnow:
-    name: Submit sitemap URLs to IndexNow
+    name: Submit changed URLs to IndexNow
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Wait 10 minutes after Purge Cache
+      - name: Wait 1 minute after Purge Cache
         if: github.event_name == 'workflow_run'
         shell: bash
         run: |
-          echo "Purge Cache completed; waiting 10 minutes before submitting to IndexNow..."
-          sleep 600
+          echo "Purge Cache completed; waiting 1 minute before submitting to IndexNow..."
+          sleep 60
 
       - name: Checkout
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
 
-      - name: Detect content changes
-        id: changes
-        shell: bash
-        run: |
-          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-            changed=$(git diff --name-only HEAD^ HEAD -- 'content/**' || true)
-          else
-            changed="content/**"
-          fi
-          if [ -z "$changed" ]; then
-            echo "No content changes in the deployed commit, skipping IndexNow."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Content changes detected:"
-            echo "$changed"
-          fi
-
-      - name: Fetch sitemap and build URL list
+      - name: Build URL list from changed content files
         id: urls
-        if: steps.changes.outputs.skip != 'true'
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          for i in 1 2 3 4 5; do
-            SITEMAP=$(curl -fsS "https://blog.zjackie.ink/sitemap.xml") && break
-            echo "Fetch failed (attempt $i), retrying in 20s..."
-            sleep 20
-          done
+          set -euo pipefail
 
-          if [ -z "$SITEMAP" ]; then
-            echo "::error::Could not fetch sitemap.xml"
-            exit 1
+          # Diff against the last successful IndexNow run so multi-commit
+          # pushes are fully covered; fall back to the previous commit.
+          prev=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/push-indexnow.yml/runs?status=success&per_page=1" \
+            --jq '.workflow_runs[0].head_sha' 2>/dev/null || true)
+          if [ -n "$prev" ] && git cat-file -e "$prev^{commit}" 2>/dev/null; then
+            echo "Diff range: $prev..HEAD"
+            changed=$(git diff --name-only "$prev" HEAD -- 'content/**' || true)
+          else
+            echo "No previous submission found; diffing last commit only."
+            changed=$(git diff --name-only HEAD^ HEAD -- 'content/**' 2>/dev/null || git ls-files 'content/**')
           fi
 
-          LIST=$(echo "$SITEMAP" | grep -oP '(?<=<loc>)[^<]+' | grep -v '/404' | jq -R . | jq -sc .)
-
-          if [ "$LIST" = "[]" ]; then
-            echo "::error::No URLs found in sitemap.xml"
-            exit 1
+          if [ -z "$changed" ]; then
+            echo "No content changes since last submission, skipping IndexNow."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
+          echo "Content changes detected:"
+          echo "$changed"
+
+          base="https://blog.zjackie.ink"
+          urls=()
+
+          while IFS= read -r f; do
+            case "$f" in
+              content/*.md) ;;
+              *) continue ;;
+            esac
+
+            # Skip drafts (deleted files can't be read and fall through,
+            # so removed pages still get submitted for deindexing).
+            if grep -qiE '^draft:[[:space:]]*true' "$f" 2>/dev/null; then
+              echo "Draft, skipped: $f"
+              continue
+            fi
+
+            rel="${f#content/}"
+            name="${rel##*/}"
+
+            lang=""
+            case "$name" in
+              *.zh.md) lang="zh/"; name="${name%.zh.md}" ;;
+              *.en.md) name="${name%.en.md}" ;;
+              *.md)    name="${name%.md}" ;;
+              *) continue ;;
+            esac
+
+            # permalinks use :slug, so a front-matter slug wins over the filename.
+            slug=$(grep -m1 '^slug:' "$f" 2>/dev/null | tr -d '\r' | sed -E "s/^slug:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*$/\1/" || true)
+
+            if [ "$rel" = "${rel#*/}" ]; then
+              # Root-level page: content/archives.md → /archives/
+              url="$base/${lang}${slug:-$name}/"
+            else
+              section="${rel%%/*}"
+              if [ "$name" = "_index" ]; then
+                url="$base/${lang}${section}/"
+              else
+                if [ "$name" = "index" ]; then
+                  name="${rel%/*}"
+                  name="${name##*/}"
+                fi
+                url="$base/${lang}${section}/${slug:-$name}/"
+                # Section list and home pages embed this post, so they changed too.
+                urls+=("$base/${lang}${section}/")
+                urls+=("$base/${lang}/")
+              fi
+            fi
+
+            urls+=("$url")
+            echo "Mapped: $f -> $url"
+          done <<< "$changed"
+
+          if [ ${#urls[@]} -eq 0 ]; then
+            echo "No submittable URLs (all drafts or non-page files), skipping IndexNow."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          LIST=$(printf '%s\n' "${urls[@]}" | sort -u | jq -R . | jq -sc .)
           echo "list=$LIST" >> "$GITHUB_OUTPUT"
-          echo "$LIST" | jq -r '.[]' | while read -r u; do echo "Queued: $u"; done
+          echo "Total unique URLs: $(jq length <<< "$LIST")"
 
       - name: Submit to IndexNow
-        if: steps.changes.outputs.skip != 'true'
+        if: steps.urls.outputs.skip != 'true'
         env:
           INDEX_NOW_API_KEY: ${{ secrets.INDEX_NOW_API_KEY }}
           URL_LIST: ${{ steps.urls.outputs.list }}
