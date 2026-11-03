@@ -21,7 +21,7 @@ enableGitInfo = true
   research = "/research/:slug/"
 
 [outputs]
-  home = ["HTML", "RSS", "JSON", "WebAppManifest"]
+  home = ["HTML", "RSS", "JSON", "WebAppManifest", "llms"]
 
 [mediaTypes]
   [mediaTypes."application/manifest+json"]
@@ -33,6 +33,11 @@ enableGitInfo = true
     baseName = "site"
     isPlainText = true
     notAlternative = true
+  [outputFormats.llms]
+    mediaType = "text/plain"
+    baseName = "llms"
+    isPlainText = true
+    notAlternative = flase
 
 [languages]
   [languages.en]
