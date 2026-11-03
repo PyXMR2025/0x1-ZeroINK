@@ -37,7 +37,6 @@ enableGitInfo = true
     mediaType = "text/plain"
     baseName = "llms"
     isPlainText = true
-    notAlternative = flase
 
 [languages]
   [languages.en]
