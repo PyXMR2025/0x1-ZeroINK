@@ -1,0 +1,157 @@
+name: Theme Override Drift
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "themes/PaperMod"
+      - "layouts/**"
+      - ".github/workflows/override-drift.yml"
+  pull_request:
+    paths:
+      - "themes/PaperMod"
+      - "layouts/**"
+      - ".github/workflows/override-drift.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: override-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: Detect theme override drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Report override drift
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          SUBMODULE_PATH=$(git config --file .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | head -n1)
+          if [ -z "$SUBMODULE_PATH" ]; then
+            echo "::warning::No git submodule found; skipping drift check."
+            exit 0
+          fi
+          echo "Submodule: $SUBMODULE_PATH"
+
+          # Determine the base revision this change started from.
+          case "${{ github.event_name }}" in
+            pull_request) BASE="origin/${{ github.base_ref }}" ;;
+            push)         BASE="${{ github.event.before }}" ;;
+            *)            BASE="HEAD~1" ;;
+          esac
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+             || ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+            BASE="HEAD~1"
+          fi
+
+          OLD_POINTER=$(git ls-tree "$BASE" "$SUBMODULE_PATH" 2>/dev/null | awk '{print $3}')
+          NEW_POINTER=$(git -C "$SUBMODULE_PATH" rev-parse HEAD)
+
+          {
+            echo "## Theme override drift report"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Base | \`${BASE}\` |"
+            echo "| Old theme pointer | \`${OLD_POINTER:-n/a}\` |"
+            echo "| New theme pointer | \`${NEW_POINTER}\` |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          SUBMODULE_CHANGED=false
+          if [ -n "$OLD_POINTER" ] && [ "$OLD_POINTER" != "$NEW_POINTER" ]; then
+            SUBMODULE_CHANGED=true
+          fi
+
+          # Files the theme changed between the two pointers.
+          THEME_CHANGED=""
+          if $SUBMODULE_CHANGED; then
+            git -C "$SUBMODULE_PATH" fetch --unshallow --quiet 2>/dev/null \
+              || git -C "$SUBMODULE_PATH" fetch --quiet 2>/dev/null || true
+            if git -C "$SUBMODULE_PATH" cat-file -e "${OLD_POINTER}^{commit}" 2>/dev/null; then
+              THEME_CHANGED=$(git -C "$SUBMODULE_PATH" diff --name-only "$OLD_POINTER" "$NEW_POINTER" -- layouts/ || true)
+            else
+              echo "::warning::Old theme commit ${OLD_POINTER} unavailable; listing current overrides only."
+            fi
+            {
+              echo "### Theme updated: \`$OLD_POINTER\` → \`$NEW_POINTER\`"
+              echo ""
+              echo "<details><summary>Commits</summary>"
+              echo ""
+              echo '```'
+              git -C "$SUBMODULE_PATH" log --oneline "$OLD_POINTER..$NEW_POINTER" 2>/dev/null || echo "(unavailable)"
+              echo '```'
+              echo ""
+              echo "</details>"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Every partial this project overrides.
+          mapfile -t OVERRIDES < <(cd layouts && find _partials -type f | sed 's|^|layouts/|' | sort)
+
+          NEED_SYNC=()
+          {
+            echo "### Override diffs vs theme"
+            echo ""
+            echo "| Override | Theme file exists | Diff lines | Theme changed it |"
+            echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for rel in "${OVERRIDES[@]}"; do
+            theme_file="$SUBMODULE_PATH/$rel"
+            local_file="$rel"
+            if [ ! -f "$theme_file" ]; then
+              echo "| \`$rel\` | no | - | - |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+
+            n=$(diff -U0 "$theme_file" "$local_file" | awk '/^[+-]/ && !/^[+-][+-]/ {n++} END {print n+0}')
+            changed_in_theme="no"
+            if [ -n "$THEME_CHANGED" ] && grep -qxF "$rel" <<< "$THEME_CHANGED"; then
+              changed_in_theme="**yes**"
+              NEED_SYNC+=("$rel")
+            fi
+            echo "| \`$rel\` | yes | $n | $changed_in_theme |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          {
+            echo ""
+            echo "> Local overrides replace theme partials wholesale, so a theme update to an overridden file is silently ignored until reviewed."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Show the actual diffs, capped to keep the summary readable.
+          {
+            echo "<details><summary>Full diffs</summary>"
+            echo ""
+            for rel in "${OVERRIDES[@]}"; do
+              theme_file="$SUBMODULE_PATH/$rel"
+              [ -f "$theme_file" ] || continue
+              echo "#### \`$rel\`"
+              echo ""
+              echo '```diff'
+              diff -U2 "$theme_file" "$rel" | head -n 200 || true
+              echo '```'
+              echo ""
+            done
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ ${#NEED_SYNC[@]} -gt 0 ]; then
+            echo "::warning::Theme updated overridden partial(s): ${NEED_SYNC[*]}. Re-sync the local override with the new theme version."
+          else
+            echo "No overridden partial was touched by this theme update."
+          fi
