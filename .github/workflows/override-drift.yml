@@ -36,12 +36,19 @@ jobs:
       - name: Report override drift
         shell: bash
         run: |
+          # GitHub Actions runs bash with `-e -o pipefail`; clear -e so this
+          # reporting job never fails the workflow.
+          set +e
           set -uo pipefail
 
-          SUBMODULE_PATH=$(git config --file .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | head -n1)
-          if [ -z "$SUBMODULE_PATH" ]; then
-            echo "::warning::No git submodule found; skipping drift check."
+          fail() {
+            echo "::warning::$1"
             exit 0
+          }
+
+          SUBMODULE_PATH=$(git config --file .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | head -n1)
+          if [ -z "$SUBMODULE_PATH" ]; then
+            fail "No git submodule found; skipping drift check."
           fi
           echo "Submodule: $SUBMODULE_PATH"
 
@@ -55,9 +62,14 @@ jobs:
              || ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
             BASE="HEAD~1"
           fi
+          if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+            fail "Cannot resolve base revision; skipping drift check."
+          fi
 
           OLD_POINTER=$(git ls-tree "$BASE" "$SUBMODULE_PATH" 2>/dev/null | awk '{print $3}')
-          NEW_POINTER=$(git -C "$SUBMODULE_PATH" rev-parse HEAD)
+          if ! NEW_POINTER=$(git -C "$SUBMODULE_PATH" rev-parse HEAD 2>/dev/null); then
+            fail "Theme submodule is not checked out; skipping drift check."
+          fi
 
           {
             echo "## Theme override drift report"
@@ -100,7 +112,8 @@ jobs:
           fi
 
           # Every partial this project overrides.
-          mapfile -t OVERRIDES < <(cd layouts && find _partials -type f | sed 's|^|layouts/|' | sort)
+          mapfile -t OVERRIDES < <(cd layouts 2>/dev/null && find _partials -type f 2>/dev/null | sed 's|^|layouts/|' | sort)
+          echo "Overrides found: ${#OVERRIDES[@]}"
 
           NEED_SYNC=()
           {
@@ -118,7 +131,7 @@ jobs:
               continue
             fi
 
-            n=$(diff -U0 "$theme_file" "$local_file" | awk '/^[+-]/ && !/^[+-][+-]/ {n++} END {print n+0}')
+            n=$( { diff -U0 "$theme_file" "$local_file" || true; } | awk '/^[+-]/ && !/^[+-][+-]/ {n++} END {print n+0}')
             changed_in_theme="no"
             if [ -n "$THEME_CHANGED" ] && grep -qxF "$rel" <<< "$THEME_CHANGED"; then
               changed_in_theme="**yes**"
@@ -143,14 +156,14 @@ jobs:
               echo "#### \`$rel\`"
               echo ""
               echo '```diff'
-              diff -U2 "$theme_file" "$rel" | head -n 200 || true
+              { diff -U2 "$theme_file" "$rel" 2>/dev/null || true; } | head -n 200
               echo '```'
               echo ""
             done
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ ${#NEED_SYNC[@]} -gt 0 ]; then
+          if [ "${#NEED_SYNC[@]}" -gt 0 ]; then
             echo "::warning::Theme updated overridden partial(s): ${NEED_SYNC[*]}. Re-sync the local override with the new theme version."
           else
             echo "No overridden partial was touched by this theme update."
