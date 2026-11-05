@@ -1,0 +1,4 @@
+# 0x1 ZeroINK
+
+## 每日分享
+- [储备证明（Proof of Reserves）是怎么运行的](https://blog.zjackie.ink/zh/share/proof-of-reserves/)
