@@ -1,43 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Bitcoin signature schemes in three layers: signing algorithm, locking script, and SIGHASH">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Bitcoin signatures in three stacked layers: signing algorithm, locking script, and SIGHASH">
   <defs>
-    <radialGradient id="glow" cx="0.12" cy="0.02" r="0.8">
-      <stop offset="0" stop-color="#38bdf8" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
-    </radialGradient>
-    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-      <path d="M32 0H0V32" fill="none" stroke="#1e293b" stroke-width="1"/>
-    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
   </defs>
 
-  <rect width="1200" height="630" fill="#0b1220"/>
-  <rect width="1200" height="630" fill="url(#grid)" opacity="0.35"/>
-  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g font-family="'Trebuchet MS', Verdana, Arial, sans-serif">
 
-  <text x="80" y="66" font-family="Consolas, 'Cascadia Mono', monospace" font-size="14" letter-spacing="4" fill="#64748b">BITCOIN · SIGNATURE SCHEMES</text>
+    <!-- title -->
+    <rect x="355" y="70" width="490" height="74" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+    <text x="600" y="118" text-anchor="middle" font-size="30" font-weight="bold" fill="#f8fafc">BITCOIN SIGNATURE SCHEMES</text>
 
-  <!-- outer frame -->
-  <rect x="80" y="96" width="1040" height="470" rx="18" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <!-- flow arrows -->
+    <line x1="600" y1="146" x2="600" y2="168" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="600" y1="284" x2="600" y2="306" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="600" y1="420" x2="600" y2="442" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- layer 1 -->
-  <rect x="110" y="130" width="4" height="88" rx="2" fill="#38bdf8"/>
-  <text x="132" y="186" font-family="Consolas, 'Cascadia Mono', monospace" font-size="20" font-weight="700" fill="#38bdf8">01</text>
-  <text x="196" y="165" font-family="'Segoe UI', Arial, sans-serif" font-size="27" font-weight="700" fill="#e5e7eb">Layer 1: Signing algorithm — the math</text>
-  <text x="196" y="209" font-family="Consolas, 'Cascadia Mono', monospace" font-size="23" fill="#cbd5e1">ECDSA (secp256k1)  vs  Schnorr (BIP340)</text>
+    <!-- layer 1 -->
+    <rect x="100" y="176" width="1000" height="106" fill="#0b1220" stroke="#334155" stroke-width="1"/>
+    <rect x="140" y="201" width="170" height="56" fill="#111827" stroke="#94a3b8" stroke-width="2"/>
+    <text x="225" y="236" text-anchor="middle" font-size="20" font-weight="bold" fill="#e5e7eb">LAYER 1</text>
+    <text x="350" y="222" font-size="26" font-weight="bold" fill="#e5e7eb">Signing algorithm — the math</text>
+    <text x="350" y="256" font-size="20" fill="#cbd5e1">ECDSA (secp256k1)  vs  Schnorr (BIP340)</text>
 
-  <line x1="80" y1="253" x2="1120" y2="253" stroke="#334155" stroke-width="1.5"/>
+    <!-- layer 2 -->
+    <rect x="100" y="312" width="1000" height="106" fill="#0b1220" stroke="#334155" stroke-width="1"/>
+    <rect x="140" y="337" width="170" height="56" fill="#111827" stroke="#94a3b8" stroke-width="2"/>
+    <text x="225" y="372" text-anchor="middle" font-size="20" font-weight="bold" fill="#e5e7eb">LAYER 2</text>
+    <text x="350" y="358" font-size="26" font-weight="bold" fill="#e5e7eb">Locking script — spending conditions</text>
+    <text x="350" y="392" font-size="20" fill="#cbd5e1">P2PK → P2PKH → P2SH → P2WPKH/P2WSH → P2TR</text>
 
-  <!-- layer 2 -->
-  <rect x="110" y="287" width="4" height="88" rx="2" fill="#fbbf24"/>
-  <text x="132" y="343" font-family="Consolas, 'Cascadia Mono', monospace" font-size="20" font-weight="700" fill="#fbbf24">02</text>
-  <text x="196" y="322" font-family="'Segoe UI', Arial, sans-serif" font-size="27" font-weight="700" fill="#e5e7eb">Layer 2: Locking script — spending conditions</text>
-  <text x="196" y="366" font-family="Consolas, 'Cascadia Mono', monospace" font-size="23" fill="#cbd5e1">P2PK → P2PKH → P2SH → P2WPKH/P2WSH → P2TR</text>
+    <!-- layer 3 -->
+    <rect x="100" y="448" width="1000" height="106" fill="#0b1220" stroke="#334155" stroke-width="1"/>
+    <rect x="140" y="473" width="170" height="56" fill="#111827" stroke="#94a3b8" stroke-width="2"/>
+    <text x="225" y="508" text-anchor="middle" font-size="20" font-weight="bold" fill="#e5e7eb">LAYER 3</text>
+    <text x="350" y="494" font-size="26" font-weight="bold" fill="#e5e7eb">SIGHASH — what the signature commits to</text>
+    <text x="350" y="528" font-size="20" fill="#cbd5e1">ALL / NONE / SINGLE + ANYONECANPAY; DEFAULT</text>
 
-  <line x1="80" y1="410" x2="1120" y2="410" stroke="#334155" stroke-width="1.5"/>
-
-  <!-- layer 3 -->
-  <rect x="110" y="444" width="4" height="88" rx="2" fill="#c084fc"/>
-  <text x="132" y="500" font-family="Consolas, 'Cascadia Mono', monospace" font-size="20" font-weight="700" fill="#c084fc">03</text>
-  <text x="196" y="478" font-family="'Segoe UI', Arial, sans-serif" font-size="27" font-weight="700" fill="#e5e7eb">Layer 3: SIGHASH — what the signature commits to</text>
-  <text x="196" y="522" font-family="Consolas, 'Cascadia Mono', monospace" font-size="23" fill="#cbd5e1">ALL / NONE / SINGLE + ANYONECANPAY; DEFAULT</text>
+  </g>
 </svg>
