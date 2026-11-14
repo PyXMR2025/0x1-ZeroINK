@@ -113,4 +113,6 @@ Binance's practice illustrates PoR's real boundary: Merkle inclusion proofs and 
 5. Does the audit report specify which account types and asset types are in scope?
 6. Is the proof recent enough, with a public update schedule?
 
+---
+
 PoR is a **cryptographic inclusion proof** plus a **signature-based control proof**. The cryptography is the reliable part; completeness and encumbrance still depend on process, audit scope, and trust.
