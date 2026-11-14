@@ -50,12 +50,12 @@ enableGitInfo = true
         Content = "Jackie's thoughts and research on cryptocurrency, privacy, and open source."
     [[languages.en.menu.main]]
       identifier = "share"
-      name = "Share Everyday"
+      name = "Share"
       url = "/share/"
       weight = 10
     [[languages.en.menu.main]]
       identifier = "research"
-      name = "Research Lab"
+      name = "Research"
       url = "/research/"
       weight = 20
     [[languages.en.menu.main]]
@@ -89,12 +89,12 @@ enableGitInfo = true
       appendFilePath = true
     [[languages.zh.menu.main]]
       identifier = "share"
-      name = "每日分享"
+      name = "分享"
       url = "/share/"
       weight = 10
     [[languages.zh.menu.main]]
       identifier = "research"
-      name = "研究实验室"
+      name = "研究"
       url = "/research/"
       weight = 20
     [[languages.zh.menu.main]]
