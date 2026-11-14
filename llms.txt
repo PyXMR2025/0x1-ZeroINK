@@ -1,0 +1,5 @@
+# 0x1 ZeroINK
+
+## Share Everyday
+- [Bitcoin Signatures, Disentangled: ECDSA, Schnorr, Taproot, and SIGHASH](https://blog.zjackie.ink/share/bitcoin-signature-schemes/)
+- [How Proof of Reserves (PoR) Actually Works](https://blog.zjackie.ink/share/proof-of-reserves/)
