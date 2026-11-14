@@ -151,10 +151,6 @@ enableGitInfo = true
     url = "https://github.com/PyXMR2025"
 
   [[params.socialIcons]]
-    name = "reddit"
-    url = "https://www.reddit.com/user/ohyijia"
-
-  [[params.socialIcons]]
     name = "x"
     url = "https://x.com/PyXMR2025"
 
