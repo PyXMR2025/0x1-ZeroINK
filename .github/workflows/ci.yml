@@ -119,7 +119,7 @@ jobs:
 
       - name: Check spelling with typos
         if: steps.changed.outputs.files != ''
-        uses: crate-ci/typos@v1.52.1
+        uses: crate-ci/typos@v1.52.2
         continue-on-error: true
         with:
           files: ${{ steps.changed.outputs.files }}
