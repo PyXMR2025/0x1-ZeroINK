@@ -46,7 +46,7 @@ jobs:
       - name: Lint Markdown
         if: steps.changed.outputs.files != ''
         uses: DavidAnson/markdownlint-cli2-action@v25
-        continue-on-error: true
+        continue-on-error: false
         with:
           globs: ${{ steps.changed.outputs.files }}
 
