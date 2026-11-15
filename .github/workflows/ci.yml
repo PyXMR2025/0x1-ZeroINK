@@ -9,14 +9,196 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  pages: read
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  markdown-lint:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Markdown files
+        id: changed
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/${{ github.base_ref }}...HEAD"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          else
+            RANGE="HEAD~1..HEAD"
+          fi
+          echo "Diff range: $RANGE"
+          { echo "files<<EOF"
+            git diff --name-only --diff-filter=ACMR "$RANGE" -- '*.md'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Lint Markdown
+        if: steps.changed.outputs.files != ''
+        uses: DavidAnson/markdownlint-cli2-action@v25
+        continue-on-error: true
+        with:
+          globs: ${{ steps.changed.outputs.files }}
+
+  drift:
+    name: Detect theme override drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Report override drift
+        shell: bash
+        run: |
+          # GitHub Actions runs bash with `-e -o pipefail`; clear -e so this
+          # reporting job never fails the workflow.
+          set +e
+          set -uo pipefail
+
+          fail() {
+            echo "::warning::$1"
+            exit 0
+          }
+
+          SUBMODULE_PATH=$(git config --file .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | awk '{print $2}' | head -n1)
+          if [ -z "$SUBMODULE_PATH" ]; then
+            fail "No git submodule found; skipping drift check."
+          fi
+          echo "Submodule: $SUBMODULE_PATH"
+
+          # Determine the base revision this change started from.
+          case "${{ github.event_name }}" in
+            pull_request) BASE="origin/${{ github.base_ref }}" ;;
+            push)         BASE="${{ github.event.before }}" ;;
+            *)            BASE="HEAD~1" ;;
+          esac
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+             || ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+            BASE="HEAD~1"
+          fi
+          if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+            fail "Cannot resolve base revision; skipping drift check."
+          fi
+
+          OLD_POINTER=$(git ls-tree "$BASE" "$SUBMODULE_PATH" 2>/dev/null | awk '{print $3}')
+          if ! NEW_POINTER=$(git -C "$SUBMODULE_PATH" rev-parse HEAD 2>/dev/null); then
+            fail "Theme submodule is not checked out; skipping drift check."
+          fi
+
+          {
+            echo "## Theme override drift report"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Base | \`${BASE}\` |"
+            echo "| Old theme pointer | \`${OLD_POINTER:-n/a}\` |"
+            echo "| New theme pointer | \`${NEW_POINTER}\` |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          SUBMODULE_CHANGED=false
+          if [ -n "$OLD_POINTER" ] && [ "$OLD_POINTER" != "$NEW_POINTER" ]; then
+            SUBMODULE_CHANGED=true
+          fi
+
+          # Files the theme changed between the two pointers.
+          THEME_CHANGED=""
+          if $SUBMODULE_CHANGED; then
+            git -C "$SUBMODULE_PATH" fetch --unshallow --quiet 2>/dev/null \
+              || git -C "$SUBMODULE_PATH" fetch --quiet 2>/dev/null || true
+            if git -C "$SUBMODULE_PATH" cat-file -e "${OLD_POINTER}^{commit}" 2>/dev/null; then
+              THEME_CHANGED=$(git -C "$SUBMODULE_PATH" diff --name-only "$OLD_POINTER" "$NEW_POINTER" -- layouts/ || true)
+            else
+              echo "::warning::Old theme commit ${OLD_POINTER} unavailable; listing current overrides only."
+            fi
+            {
+              echo "### Theme updated: \`$OLD_POINTER\` → \`$NEW_POINTER\`"
+              echo ""
+              echo "<details><summary>Commits</summary>"
+              echo ""
+              echo '```'
+              git -C "$SUBMODULE_PATH" log --oneline "$OLD_POINTER..$NEW_POINTER" 2>/dev/null || echo "(unavailable)"
+              echo '```'
+              echo ""
+              echo "</details>"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Every partial this project overrides.
+          mapfile -t OVERRIDES < <(cd layouts 2>/dev/null && find _partials -type f 2>/dev/null | sed 's|^|layouts/|' | sort)
+          echo "Overrides found: ${#OVERRIDES[@]}"
+
+          NEED_SYNC=()
+          {
+            echo "### Override diffs vs theme"
+            echo ""
+            echo "| Override | Theme file exists | Diff lines | Theme changed it |"
+            echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for rel in "${OVERRIDES[@]}"; do
+            theme_file="$SUBMODULE_PATH/$rel"
+            local_file="$rel"
+            if [ ! -f "$theme_file" ]; then
+              echo "| \`$rel\` | no | - | - |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+
+            n=$( { diff -U0 "$theme_file" "$local_file" || true; } | awk '/^[+-]/ && !/^[+-][+-]/ {n++} END {print n+0}')
+            changed_in_theme="no"
+            if [ -n "$THEME_CHANGED" ] && grep -qxF "$rel" <<< "$THEME_CHANGED"; then
+              changed_in_theme="**yes**"
+              NEED_SYNC+=("$rel")
+            fi
+            echo "| \`$rel\` | yes | $n | $changed_in_theme |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          {
+            echo ""
+            echo "> Local overrides replace theme partials wholesale, so a theme update to an overridden file is silently ignored until reviewed."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Show the actual diffs, capped to keep the summary readable.
+          {
+            echo "<details><summary>Full diffs</summary>"
+            echo ""
+            for rel in "${OVERRIDES[@]}"; do
+              theme_file="$SUBMODULE_PATH/$rel"
+              [ -f "$theme_file" ] || continue
+              echo "#### \`$rel\`"
+              echo ""
+              echo '```diff'
+              { diff -U2 "$theme_file" "$rel" 2>/dev/null || true; } | head -n 200
+              echo '```'
+              echo ""
+            done
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${#NEED_SYNC[@]}" -gt 0 ]; then
+            echo "::warning::Theme updated overridden partial(s): ${NEED_SYNC[*]}. Re-sync the local override with the new theme version."
+          else
+            echo "No overridden partial was touched by this theme update."
+          fi
+
   build:
     name: Build
+    needs: [markdown-lint, drift]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -60,8 +242,66 @@ jobs:
           # Minified output must be a single line
           test "$(wc -l < public/sw.js | tr -d ' ')" -le 1
 
-  markdown-lint:
-    name: Markdown lint
+  deploy:
+    name: Build and publish to gh-pages
+    needs: build
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Set up Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "latest"
+          extended: true
+
+      - name: Build site
+        run: hugo --gc --minify --cleanDestinationDir
+
+      - name: Minify static JS/CSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+
+          # Hugo already minifies rendered HTML/XML/JSON and every asset that
+          # goes through its resource pipeline. Files copied verbatim from
+          # static/ (e.g. sw.js) are left untouched, so minify them here.
+          # Fingerprinted bundles are skipped: their SRI hashes are embedded
+          # in the HTML and would break if their content changed.
+          for f in public/**/*.js public/**/*.css; do
+            if [[ "$f" =~ \.[0-9a-f]{32,}\.(js|css)$ ]]; then
+              continue
+            fi
+            echo "Minifying $f"
+            npx --yes esbuild@0.25.0 "$f" --minify --outfile="$f" --allow-overwrite
+          done
+
+      - name: Publish to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true
+          enable_jekyll: false
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_message: "deploy: ${{ github.sha }}"
+          # Uncomment when the custom domain is configured in GitHub Pages:
+          cname: blog.zjackie.ink
+
+  indexnow:
+    name: Submit changed URLs to IndexNow
+    needs: purge-cache
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -69,57 +309,239 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed Markdown files
-        id: changed
+      - name: Build URL list from changed content files
+        id: urls
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            RANGE="origin/${{ github.base_ref }}...HEAD"
-          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          set -euo pipefail
+
+          # Diff against the last successful IndexNow run so multi-commit
+          # pushes are fully covered; fall back to the previous commit.
+          prev=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?status=success&per_page=1" \
+            --jq '.workflow_runs[0].head_sha' 2>/dev/null || true)
+          if [ -n "$prev" ] && git cat-file -e "$prev^{commit}" 2>/dev/null; then
+            echo "Diff range: $prev..HEAD"
+            changed=$(git diff --name-only "$prev" HEAD -- 'content/**' || true)
           else
-            RANGE="HEAD~1..HEAD"
+            echo "No previous submission found; diffing last commit only."
+            changed=$(git diff --name-only HEAD^ HEAD -- 'content/**' 2>/dev/null || git ls-files 'content/**')
           fi
-          echo "Diff range: $RANGE"
-          { echo "files<<EOF"
-            git diff --name-only --diff-filter=ACMR "$RANGE" -- '*.md'
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
 
-      - name: Lint Markdown
-        if: steps.changed.outputs.files != ''
-        uses: DavidAnson/markdownlint-cli2-action@v25
-        continue-on-error: true
-        with:
-          globs: ${{ steps.changed.outputs.files }}
+          if [ -z "$changed" ]; then
+            echo "No content changes since last submission, skipping IndexNow."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-  spell-check:
-    name: Spell check
+          echo "Content changes detected:"
+          echo "$changed"
+
+          base="https://blog.zjackie.ink"
+          urls=()
+
+          while IFS= read -r f; do
+            case "$f" in
+              content/*.md) ;;
+              *) continue ;;
+            esac
+
+            # Skip drafts (deleted files can't be read and fall through,
+            # so removed pages still get submitted for deindexing).
+            if grep -qiE '^draft:[[:space:]]*true' "$f" 2>/dev/null; then
+              echo "Draft, skipped: $f"
+              continue
+            fi
+
+            rel="${f#content/}"
+            name="${rel##*/}"
+
+            lang=""
+            case "$name" in
+              *.zh.md) lang="zh/"; name="${name%.zh.md}" ;;
+              *.en.md) name="${name%.en.md}" ;;
+              *.md)    name="${name%.md}" ;;
+              *) continue ;;
+            esac
+
+            # permalinks use :slug, so a front-matter slug wins over the filename.
+            slug=$(grep -m1 '^slug:' "$f" 2>/dev/null | tr -d '\r' | sed -E "s/^slug:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*$/\1/" || true)
+
+            if [ "$rel" = "${rel#*/}" ]; then
+              # Root-level page: content/archives.md → /archives/
+              url="$base/${lang}${slug:-$name}/"
+            else
+              section="${rel%%/*}"
+              if [ "$name" = "_index" ]; then
+                url="$base/${lang}${section}/"
+              else
+                if [ "$name" = "index" ]; then
+                  name="${rel%/*}"
+                  name="${name##*/}"
+                fi
+                url="$base/${lang}${section}/${slug:-$name}/"
+                # Section list and home pages embed this post, so they changed too.
+                urls+=("$base/${lang}${section}/")
+                urls+=("$base/${lang}/")
+              fi
+            fi
+
+            urls+=("$url")
+            echo "Mapped: $f -> $url"
+          done <<< "$changed"
+
+          if [ ${#urls[@]} -eq 0 ]; then
+            echo "No submittable URLs (all drafts or non-page files), skipping IndexNow."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          LIST=$(printf '%s\n' "${urls[@]}" | sort -u | jq -R . | jq -sc .)
+          echo "list=$LIST" >> "$GITHUB_OUTPUT"
+          echo "Total unique URLs: $(jq length <<< "$LIST")"
+
+      - name: Submit to IndexNow
+        if: steps.urls.outputs.skip != 'true'
+        env:
+          INDEX_NOW_API_KEY: ${{ secrets.INDEX_NOW_API_KEY }}
+          URL_LIST: ${{ steps.urls.outputs.list }}
+        run: |
+          if [ -z "$INDEX_NOW_API_KEY" ]; then
+            echo "::error::Secret INDEX_NOW_API_KEY is empty. Set it in Settings → Secrets and variables → Actions (repository secrets, not environment secrets)."
+            exit 1
+          fi
+          echo "Key length: ${#INDEX_NOW_API_KEY}"
+          echo "URL count: $(jq length <<< "$URL_LIST")"
+
+          jq -n \
+            --arg host "blog.zjackie.ink" \
+            --arg key "$INDEX_NOW_API_KEY" \
+            --arg keyLocation "https://blog.zjackie.ink/${INDEX_NOW_API_KEY}.txt" \
+            --argjson urlList "$URL_LIST" \
+            '{host: $host, key: $key, keyLocation: $keyLocation, urlList: $urlList}' > payload.json
+
+          response=$(curl -sS -w "\n%{http_code}" -X POST "https://api.indexnow.org/indexnow" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data-binary @payload.json)
+
+          body=$(echo "$response" | head -n -1)
+          code=$(echo "$response" | tail -n 1)
+          echo "IndexNow response ($code): $body"
+
+          case "$code" in
+            200|202) echo "Submitted successfully." ;;
+            *) echo "::error::IndexNow submission failed with HTTP $code"; exit 1 ;;
+          esac
+
+  purge-cache:
+    name: Purge Cloudflare cache
+    needs: deploy
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for gh-pages build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          baseline=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "Waiting for a Pages build finished after $baseline ..."
+          baseline_ts=$(( $(date -u -d "$baseline" +%s) - 60 ))   # small clock-skew tolerance
+          deadline=$((SECONDS + 600))   # 10 min timeout
+          while true; do
+            if build=$(gh api "repos/${{ github.repository }}/pages/builds/latest" --jq '{status, updated_at}' 2>/dev/null); then
+              status=$(jq -r '.status' <<< "$build")
+              updated_at=$(jq -r '.updated_at' <<< "$build")
+              updated_ts=$(date -u -d "$updated_at" +%s)
+              echo "Pages build: status=$status updated_at=$updated_at"
+              if [ "$status" = "built" ] && [ "$updated_ts" -ge "$baseline_ts" ]; then
+                echo "gh-pages build finished."
+                exit 0
+              fi
+            else
+              echo "::warning::Pages builds API unavailable, falling back to a fixed wait."
+              sleep 60
+              exit 0
+            fi
+            if [ $SECONDS -ge $deadline ]; then
+              echo "::warning::Timed out waiting for the Pages build, continuing anyway."
+              exit 0
+            fi
+            sleep 15
+          done
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          submodules: true
+          fetch-depth: 2
 
-      - name: Get changed files
-        id: changed
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            RANGE="origin/${{ github.base_ref }}...HEAD"
-          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            RANGE="${{ github.event.before }}..${{ github.sha }}"
-          else
-            RANGE="HEAD~1..HEAD"
-          fi
-          echo "Diff range: $RANGE"
-          git diff --name-only --diff-filter=ACMR "$RANGE" > files.txt
-          echo "files=$(paste -sd' ' files.txt)" >> "$GITHUB_OUTPUT"
-
-      - name: Check spelling with typos
-        if: steps.changed.outputs.files != ''
-        uses: crate-ci/typos@v1.52.2
-        continue-on-error: true
+      - name: Set up Hugo
+        uses: peaceiris/actions-hugo@v3
         with:
-          files: ${{ steps.changed.outputs.files }}
+          hugo-version: "latest"
+          extended: true
+
+      - name: Build site
+        run: hugo --gc --minify --cleanDestinationDir
+
+      - name: Purge Cloudflare cache
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          BASE_URL: https://blog.zjackie.ink
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ZONE_ID:-}" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ZONE_ID not set, skipping cache purge."
+            exit 0
+          fi
+
+          urls=()
+
+          # 1. All HTML files from the build output
+          while IFS= read -r -d '' f; do
+            path="${f#public/}"
+            urls+=("$BASE_URL/$path")
+            # Also purge the pretty directory URL for index.html pages
+            if [ "$path" = "index.html" ]; then
+              urls+=("$BASE_URL/")
+            elif [[ "$path" == */index.html ]]; then
+              urls+=("$BASE_URL/${path%/index.html}/")
+            fi
+          done < <(find public -type f -name '*.html' -print0)
+
+          # 2. Files changed in the deployed commit (map repo paths to site URLs)
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              rel="$f"
+              [[ "$rel" == static/* ]] && rel="${rel#static/}"
+              if [ -f "public/$rel" ]; then
+                urls+=("$BASE_URL/$rel")
+              fi
+            done < <(git diff --name-only HEAD^ HEAD || true)
+          fi
+
+          # De-duplicate
+          mapfile -t urls < <(printf '%s\n' "${urls[@]}" | sort -u)
+          echo "Purging ${#urls[@]} URLs"
+
+          # Purge in batches of 30 (Cloudflare API limit per request)
+          for ((i = 0; i < ${#urls[@]}; i += 30)); do
+            batch=("${urls[@]:i:30}")
+            json=$(printf '%s\n' "${batch[@]}" | jq -R . | jq -cs '{files: .}')
+            response=$(curl -sS -X POST \
+              "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "$json")
+            if [ "$(jq -r '.success' <<< "$response")" != "true" ]; then
+              echo "::error::Cloudflare cache purge failed: $response"
+              exit 1
+            fi
+            echo "Purged batch $((i / 30 + 1)): ${#batch[@]} URLs"
+          done
