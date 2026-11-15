@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Bitcoin signatures in three stacked layers: signing algorithm, locking script, and SIGHASH">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <g font-family="'Trebuchet MS', Verdana, Arial, sans-serif">
+
+    <!-- title -->
+    <rect x="355" y="70" width="490" height="74" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+    <text x="600" y="118" text-anchor="middle" font-size="30" font-weight="bold" fill="#f8fafc">BITCOIN SIGNATURE SCHEMES</text>
+
+    <!-- flow arrows -->
+    <line x1="600" y1="146" x2="600" y2="168" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="600" y1="284" x2="600" y2="306" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="600" y1="420" x2="600" y2="442" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- layer 1 -->
+    <rect x="100" y="176" width="1000" height="106" fill="#0b1220" stroke="#334155" stroke-width="1"/>
+    <rect x="140" y="201" width="170" height="56" fill="#111827" stroke="#94a3b8" stroke-width="2"/>
+    <text x="225" y="236" text-anchor="middle" font-size="20" font-weight="bold" fill="#e5e7eb">LAYER 1</text>
+    <text x="350" y="222" font-size="26" font-weight="bold" fill="#e5e7eb">Signing algorithm — the math</text>
+    <text x="350" y="256" font-size="20" fill="#cbd5e1">ECDSA (secp256k1)  vs  Schnorr (BIP340)</text>
+
+    <!-- layer 2 -->
+    <rect x="100" y="312" width="1000" height="106" fill="#0b1220" stroke="#334155" stroke-width="1"/>
+    <rect x="140" y="337" width="170" height="56" fill="#111827" stroke="#94a3b8" stroke-width="2"/>
+    <text x="225" y="372" text-anchor="middle" font-size="20" font-weight="bold" fill="#e5e7eb">LAYER 2</text>
+    <text x="350" y="358" font-size="26" font-weight="bold" fill="#e5e7eb">Locking script — spending conditions</text>
+    <text x="350" y="392" font-size="20" fill="#cbd5e1">P2PK → P2PKH → P2SH → P2WPKH/P2WSH → P2TR</text>
+
+    <!-- layer 3 -->
+    <rect x="100" y="448" width="1000" height="106" fill="#0b1220" stroke="#334155" stroke-width="1"/>
+    <rect x="140" y="473" width="170" height="56" fill="#111827" stroke="#94a3b8" stroke-width="2"/>
+    <text x="225" y="508" text-anchor="middle" font-size="20" font-weight="bold" fill="#e5e7eb">LAYER 3</text>
+    <text x="350" y="494" font-size="26" font-weight="bold" fill="#e5e7eb">SIGHASH — what the signature commits to</text>
+    <text x="350" y="528" font-size="20" fill="#cbd5e1">ALL / NONE / SINGLE + ANYONECANPAY; DEFAULT</text>
+
+  </g>
+</svg>

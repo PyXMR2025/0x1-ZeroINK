@@ -1,0 +1,5 @@
+# 0x1 ZeroINK
+
+## 每日分享
+- [比特币签名机制拆解：ECDSA、Schnorr、Taproot 与 SIGHASH 详解](https://blog.zjackie.ink/zh/share/bitcoin-signature-schemes/)
+- [储备证明（Proof of Reserves）是怎么运行的](https://blog.zjackie.ink/zh/share/proof-of-reserves/)
