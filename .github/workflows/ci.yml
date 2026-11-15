@@ -210,7 +210,7 @@ jobs:
       - name: Set up Hugo
         uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: "latest"
+          hugo-version: "0.170.0"
           extended: true
 
       - name: Build site
@@ -232,7 +232,7 @@ jobs:
               continue
             fi
             echo "Minifying $f"
-            npx --yes esbuild@0.25.0 "$f" --minify --outfile="$f" --allow-overwrite
+            npx --yes esbuild@0.28.2 "$f" --minify --outfile="$f" --allow-overwrite
           done
 
       - name: Verify build output
@@ -259,7 +259,7 @@ jobs:
       - name: Set up Hugo
         uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: "latest"
+          hugo-version: "0.170.0"
           extended: true
 
       - name: Build site
@@ -281,7 +281,7 @@ jobs:
               continue
             fi
             echo "Minifying $f"
-            npx --yes esbuild@0.25.0 "$f" --minify --outfile="$f" --allow-overwrite
+            npx --yes esbuild@0.28.2 "$f" --minify --outfile="$f" --allow-overwrite
           done
 
       - name: Publish to gh-pages branch
@@ -482,7 +482,7 @@ jobs:
       - name: Set up Hugo
         uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: "latest"
+          hugo-version: "0.170.0"
           extended: true
 
       - name: Build site
