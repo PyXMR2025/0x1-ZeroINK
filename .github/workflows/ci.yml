@@ -319,7 +319,9 @@ jobs:
 
           # Diff against the last successful IndexNow run so multi-commit
           # pushes are fully covered; fall back to the previous commit.
-          prev=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?status=success&per_page=1" \
+          # Restrict to main-branch push runs: a successful PR run would
+          # otherwise poison the diff base with a non-main head_sha.
+          prev=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?status=success&branch=main&event=push&per_page=1" \
             --jq '.workflow_runs[0].head_sha' 2>/dev/null || true)
           if [ -n "$prev" ] && git cat-file -e "$prev^{commit}" 2>/dev/null; then
             echo "Diff range: $prev..HEAD"
